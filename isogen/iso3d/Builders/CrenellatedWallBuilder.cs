@@ -1,23 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using IsoGen;
-using static isogen.iso3d.Isometric3dExtensions;
 
 namespace isogen.iso3d.Builders
 {
     public class CrenellatedWallBuilder : IRender
     {
-        internal Image TopImage { get; set; }
-        internal Image LeftImage { get; set; }
-        internal Image RightImage { get; set; }
-        internal Image CrenellationImage { get; set; }
-        internal int GridDiagonal { get; set; }
-        internal float Height { get; set; } = 0;
-        internal CrenellationVariant Variant { get; set; }
-        internal float CrenellationHeight { get; set; } = 0.75f;
-        internal float CrenellationThickness { get; set; } = 0.15f;
-        internal float BottomTaper { get; set; } = 0.15f;
+        private Image TopImage { get; set; }
+        private Image LeftImage { get; set; }
+        private Image RightImage { get; set; }
+        private Image CrenellationImage { get; set; }
+        private int GridDiagonal { get; set; }
+        private float Height { get; set; } = 0;
+        private CrenellationVariant Variant { get; set; }
+        private float CrenellationHeight { get; set; } = 0.75f;
+        private float CrenellationThickness { get; set; } = 0.15f;
 
         public CrenellatedWallBuilder(Image baseImage, int gridDiagonal, CrenellationVariant variant)
         {
@@ -29,45 +28,57 @@ namespace isogen.iso3d.Builders
             Variant = variant;
         }
 
-        [Flags]
-        public enum CrenellationVariant
-        {
-            UpperLeft = 0x0001,
-            UpperRight = 0x0010,
-            LowerLeft = 0x0100,
-            LowerRight = 0x1000,
-        }
+        public enum CrenellationVariant { Single, Corner }
+        
         public CrenellatedWallBuilder WithTop(Image image)
         {
-            return new CrenellatedWallBuilder(image, GridDiagonal, Variant) {LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height};
+            return new CrenellatedWallBuilder(image, GridDiagonal, Variant)
+            {
+                LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height
+            };
         }
-        
+
         public CrenellatedWallBuilder WithLeft(Image image)
         {
-            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant) {LeftImage = image, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height};
+            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant)
+            {
+                LeftImage = image, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height
+            };
         }
-        
+
         public CrenellatedWallBuilder WithRight(Image image)
         {
-            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant) {LeftImage = LeftImage, RightImage = image, CrenellationImage = CrenellationImage, Height = Height};
+            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant)
+            {
+                LeftImage = LeftImage, RightImage = image, CrenellationImage = CrenellationImage, Height = Height
+            };
         }
-        
+
         public CrenellatedWallBuilder WithCrenellation(Image image)
         {
-            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant) {LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = image, Height = Height};
+            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant)
+            {
+                LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = image, Height = Height
+            };
         }
 
         public CrenellatedWallBuilder Extrude(float height)
         {
-            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant) {LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = height};
+            return new CrenellatedWallBuilder(TopImage, GridDiagonal, Variant)
+            {
+                LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = height
+            };
         }
 
         public CrenellatedWallBuilder WithVariant(CrenellationVariant variant)
         {
-            return new CrenellatedWallBuilder(TopImage, GridDiagonal, variant) {LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height};
+            return new CrenellatedWallBuilder(TopImage, GridDiagonal, variant)
+            {
+                LeftImage = LeftImage, RightImage = RightImage, CrenellationImage = CrenellationImage, Height = Height
+            };
         }
 
-        public Image Render()
+        public Image Render(Orientation o = Orientation.TopLeft)
         {
             Size s = CalculateBounds();
             Bitmap b = new Bitmap(s.Width, s.Height);
@@ -75,21 +86,15 @@ namespace isogen.iso3d.Builders
             {
                 g.InterpolationMode = InterpolationMode.NearestNeighbor;
                 g.SmoothingMode = SmoothingMode.None;
-                if (Variant.HasFlag(CrenellationVariant.UpperLeft))
+                
+                switch (Variant)
                 {
-                    RenderTopLeftCrenellation(g);
-                }
-                if (Variant.HasFlag(CrenellationVariant.UpperRight))
-                {
-                    RenderTopRightCrenellation(g);
-                }
-                if (Variant.HasFlag(CrenellationVariant.LowerLeft))
-                {
-                    RenderBottomLeftCrenellation(g);
-                }
-                if (Variant.HasFlag(CrenellationVariant.LowerRight))
-                {
-                    RenderBottomRightCrenellation(g);
+                    case CrenellationVariant.Single:
+                        RenderSingle(g, o);
+                        break;
+                    case CrenellationVariant.Corner:
+                        //todo: implement
+                        break;
                 }
             }
 
@@ -101,317 +106,101 @@ namespace isogen.iso3d.Builders
             return Isometric3dExtensions.CalculateBounds(GridDiagonal, Height + CrenellationHeight);
         }
 
-        private void RenderTopLeftCrenellation(Graphics g)
+        private void RenderSingle(Graphics g, Orientation o)
         {
-            //only draw taper if enough space
-            if (Height >= BottomTaper)
-            {
-                Relative3dPoint[] taperBFrontPoints =
-                {
-                    new Relative3dPoint(0, CrenellationThickness, CrenellationHeight),
-                    new Relative3dPoint(1, CrenellationThickness, CrenellationHeight),
-                    new Relative3dPoint(0, 0, CrenellationHeight + BottomTaper)
-                };
-                
-                g.DrawImage(CrenellationImage, taperBFrontPoints, GridDiagonal, BrushesAndColors.ShadingRightDarkerColor);
-
-                Point[] points =
-                {
-                    new Point(0, 0),
-                    new Point(CrenellationImage.Width, 0),
-                    new Point(0, CrenellationImage.Height),
-                };
-                Relative3dPoint[] taperBLeftPoints =
-                {
-                    new Relative3dPoint(0, 0, CrenellationHeight),
-                    new Relative3dPoint(0, CrenellationThickness, CrenellationHeight),
-                    new Relative3dPoint(0, 0, CrenellationHeight + BottomTaper)
-                };
-                using (Bitmap image = CrenellationImage.IntersectMask(points))
-                {
-                    g.DrawImage(image, taperBLeftPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                }
-            }
             
+            List<Relative3dFace> faces = new List<Relative3dFace>();
+
             using (Bitmap frontImage = GetMaskedCrenellationFrontImage())
             using (Bitmap topImage = GetMaskedCrenellationTopImage())
             using (Bitmap top2Image = GetMaskedCrenellationTop2Image())
             {
-                Relative3dPoint[] top1Points =
+                //top 1
+                faces.Add(new Relative3dFace(new[]
                 {
-                    new Relative3dPoint(0, 0, CrenellationHeight / 2),
-                    new Relative3dPoint(1, 0, CrenellationHeight / 2),
-                    new Relative3dPoint(0, CrenellationThickness, CrenellationHeight / 2)
-                };
-                g.DrawImage(topImage, top1Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                Relative3dPoint[] top2Points =
-                {
-                    new Relative3dPoint(0, 0, 0),
-                    new Relative3dPoint(1, 0, 0),
-                    new Relative3dPoint(0, CrenellationThickness, 0)
-                };
-                g.DrawImage(top2Image, top2Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
+                    new Relative3dCoordinate(0, 0, CrenellationHeight / 2),
+                    new Relative3dCoordinate(1, 0, CrenellationHeight / 2),
+                    new Relative3dCoordinate(0, CrenellationThickness, CrenellationHeight / 2)
+                }, topImage, new[] {0, 0, 0, 0}, BrushesAndColors.TopShadings));
                 
-                Relative3dPoint[] frontPoints = {
-                    new Relative3dPoint(0, CrenellationThickness, 0),
-                    new Relative3dPoint(1, CrenellationThickness, 0),
-                    new Relative3dPoint(0, CrenellationThickness, CrenellationHeight),
-                };
-                g.DrawImage(frontImage, frontPoints, GridDiagonal, BrushesAndColors.ShadingRightColor);
+                
+                //top 2
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(0, 0, 0),
+                    new Relative3dCoordinate(1, 0, 0),
+                    new Relative3dCoordinate(0, CrenellationThickness, 0)
+                }, top2Image, new[] {1, 1, 1, 1}, BrushesAndColors.TopShadings));
 
-                Relative3dPoint[] left1Points =
+                //right front
+                faces.Add(new Relative3dFace(new[]
                 {
-                    new Relative3dPoint(0, 0, 0),
-                    new Relative3dPoint(0, CrenellationThickness, 0),
-                    new Relative3dPoint(0, 0, CrenellationHeight)
-                };
-                g.DrawImage(CrenellationImage, left1Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
+                    new Relative3dCoordinate(0, CrenellationThickness, 0),
+                    new Relative3dCoordinate(1, CrenellationThickness, 0),
+                    new Relative3dCoordinate(0, CrenellationThickness, CrenellationHeight),
+                }, frontImage, new[] {2, 2, -1, -1}, BrushesAndColors.RightFrontShadings));
                 
-                Relative3dPoint[] left2Points =
+                //left back
+                faces.Add(new Relative3dFace(new[]
                 {
-                    new Relative3dPoint(3f / 8, 0, 0),
-                    new Relative3dPoint(3f / 8, CrenellationThickness, 0),
-                    new Relative3dPoint(3f / 8, 0, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, left2Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
+                    new Relative3dCoordinate(0, 0, 0),
+                    new Relative3dCoordinate(1, 0, 0),
+                    new Relative3dCoordinate(0, 0, CrenellationHeight),
+                }, frontImage, new[] {-1, -1, 2, 2}, BrushesAndColors.LeftBackShadings));
+
+                //right back 1
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(1, 0, 0),
+                    new Relative3dCoordinate(1, CrenellationThickness, 0),
+                    new Relative3dCoordinate(1, 0, CrenellationHeight)
+                }, CrenellationImage, new[] {-1, 3, 3, -1}, BrushesAndColors.RightBackShadings));
                 
-                Relative3dPoint[] left3Points =
+                //left front 1
+                faces.Add(new Relative3dFace(new[]
                 {
-                    new Relative3dPoint(7f / 8, 0, 0),
-                    new Relative3dPoint(7f / 8, CrenellationThickness, 0),
-                    new Relative3dPoint(7f / 8, 0, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, left3Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
+                    new Relative3dCoordinate(7f / 8, 0, 0),
+                    new Relative3dCoordinate(7f / 8, CrenellationThickness, 0),
+                    new Relative3dCoordinate(7f / 8, 0, CrenellationHeight / 2)
+                }, CrenellationImage, new[] {3, -1, -1, 3}, BrushesAndColors.LeftFrontShadings));
+
+                //right back 2
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(5f / 8, 0, 0),
+                    new Relative3dCoordinate(5f / 8, CrenellationThickness, 0),
+                    new Relative3dCoordinate(5f / 8, 0, CrenellationHeight / 2)
+                }, CrenellationImage, new[] {-1, 4, 4, -1}, BrushesAndColors.RightBackShadings));
+
+                //left front 2
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(3f / 8, 0, 0),
+                    new Relative3dCoordinate(3f / 8, CrenellationThickness, 0),
+                    new Relative3dCoordinate(3f / 8, 0, CrenellationHeight / 2)
+                }, CrenellationImage, new[] {4, -1, -1, 4}, BrushesAndColors.LeftFrontShadings));
+                
+                //right back 3
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(1f / 8, 0, 0),
+                    new Relative3dCoordinate(1f / 8, CrenellationThickness, 0),
+                    new Relative3dCoordinate(1f / 8, 0, CrenellationHeight / 2)
+                }, CrenellationImage, new[] {-1, 5, 5, -1}, BrushesAndColors.RightBackShadings));
+
+                //left front 3
+                faces.Add(new Relative3dFace(new[]
+                {
+                    new Relative3dCoordinate(0, 0, 0),
+                    new Relative3dCoordinate(0, CrenellationThickness, 0),
+                    new Relative3dCoordinate(0, 0, CrenellationHeight)
+                }, CrenellationImage, new[] {5, -1, -1, 5}, BrushesAndColors.LeftFrontShadings));
+                
+                //render inside here, cause idiot me forgot that you can't draw disposed images :)
+                g.Draw3dFaces(faces, o, GridDiagonal);
             }
         }
 
-        private void RenderBottomRightCrenellation(Graphics g)
-        {
-            float yOffset = 1 - CrenellationThickness;
-            //only draw taper if enough space
-            if (Height >= BottomTaper)
-            {
-                Point[] points =
-                {
-                    new Point(0, 0),
-                    new Point(CrenellationImage.Width, 0),
-                    new Point(CrenellationImage.Width, CrenellationImage.Height),
-                };
-                Relative3dPoint[] taperBLeftPoints =
-                {
-                    new Relative3dPoint(0, yOffset, CrenellationHeight),
-                    new Relative3dPoint(0, 1, CrenellationHeight), //yOffset + CrenellationThickness
-                    new Relative3dPoint(0, yOffset, CrenellationHeight + BottomTaper)
-                };
-                using (Bitmap image = CrenellationImage.IntersectMask(points))
-                {
-                    g.DrawImage(image, taperBLeftPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                }
-            }
-            
-            using (Bitmap frontImage = GetMaskedCrenellationFrontImage())
-            using (Bitmap topImage = GetMaskedCrenellationTopImage())
-            using (Bitmap top2Image = GetMaskedCrenellationTop2Image())
-            {
-                Relative3dPoint[] top1Points =
-                {
-                    new Relative3dPoint(0, yOffset, CrenellationHeight / 2),
-                    new Relative3dPoint(1, yOffset, CrenellationHeight / 2),
-                    new Relative3dPoint(0, 1, CrenellationHeight / 2)
-                };
-                g.DrawImage(topImage, top1Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                Relative3dPoint[] top2Points =
-                {
-                    new Relative3dPoint(0, yOffset, 0),
-                    new Relative3dPoint(1, yOffset, 0),
-                    new Relative3dPoint(0, 1, 0)
-                };
-                g.DrawImage(top2Image, top2Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                
-                Relative3dPoint[] frontPoints = {
-                    new Relative3dPoint(0, 1, 0),
-                    new Relative3dPoint(1, 1, 0),
-                    new Relative3dPoint(0, 1, CrenellationHeight),
-                };
-                g.DrawImage(frontImage, frontPoints, GridDiagonal, BrushesAndColors.ShadingRightColor);
-
-                Relative3dPoint[] left1Points =
-                {
-                    new Relative3dPoint(0, yOffset, 0),
-                    new Relative3dPoint(0,  1, 0),
-                    new Relative3dPoint(0, yOffset, CrenellationHeight)
-                };
-                g.DrawImage(CrenellationImage, left1Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                
-                Relative3dPoint[] left2Points =
-                {
-                    new Relative3dPoint(3f / 8, yOffset, 0),
-                    new Relative3dPoint(3f / 8, 1, 0),
-                    new Relative3dPoint(3f / 8, yOffset, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, left2Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                
-                Relative3dPoint[] left3Points =
-                {
-                    new Relative3dPoint(7f / 8, yOffset, 0),
-                    new Relative3dPoint(7f / 8, 1, 0),
-                    new Relative3dPoint(7f / 8, yOffset, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, left3Points, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-            }
-        }
-        
-        private void RenderTopRightCrenellation(Graphics g)
-        {
-            float xOffset = 1 - CrenellationThickness;
-            //only draw taper if enough space
-            if (Height >= BottomTaper)
-            {
-                Point[] points =
-                {
-                    new Point(0, 0),
-                    new Point(CrenellationImage.Width, 0),
-                    new Point(CrenellationImage.Width, CrenellationImage.Height),
-                };
-                Relative3dPoint[] taperBLeftPoints =
-                {
-                    new Relative3dPoint(xOffset, 1, CrenellationHeight),
-                    new Relative3dPoint(1, 1, CrenellationHeight),
-                    new Relative3dPoint(xOffset, 1, CrenellationHeight + BottomTaper)
-                };
-                using (Bitmap image = CrenellationImage.IntersectMask(points))
-                {
-                    g.DrawImage(image, taperBLeftPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                }
-            }
-            
-            using (Bitmap frontImage = GetMaskedCrenellationFrontImage())
-            using (Bitmap topImage = GetMaskedCrenellationTopImage())
-            using (Bitmap top2Image = GetMaskedCrenellationTop2Image())
-            {
-                Relative3dPoint[] top1Points =
-                {
-                    new Relative3dPoint(1, 0, CrenellationHeight / 2),
-                    new Relative3dPoint(1, 1, CrenellationHeight / 2),
-                    new Relative3dPoint(xOffset, 0, CrenellationHeight / 2)
-                };
-                g.DrawImage(topImage, top1Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                Relative3dPoint[] top2Points =
-                {
-                    new Relative3dPoint(1, 0, 0),
-                    new Relative3dPoint(1, 1, 0),
-                    new Relative3dPoint(xOffset, 0, 0)
-                };
-                g.DrawImage(top2Image, top2Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                
-                Relative3dPoint[] frontPoints = {
-                    new Relative3dPoint(xOffset, 0, 0),
-                    new Relative3dPoint(xOffset, 1, 0),
-                    new Relative3dPoint(xOffset, 0, CrenellationHeight),
-                };
-                g.DrawImage(frontImage, frontPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-
-                Relative3dPoint[] right1Points =
-                {
-                    new Relative3dPoint(xOffset, 1, 0),
-                    new Relative3dPoint(1,  1, 0),
-                    new Relative3dPoint(xOffset, 1, CrenellationHeight)
-                };
-                g.DrawImage(CrenellationImage, right1Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-                
-                Relative3dPoint[] right2Points =
-                {
-                    new Relative3dPoint(xOffset, 5f / 8, 0),
-                    new Relative3dPoint(1, 5f / 8, 0),
-                    new Relative3dPoint(xOffset, 5f / 8, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, right2Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-                
-                Relative3dPoint[] right3Points =
-                {
-                    new Relative3dPoint(xOffset, 1f / 8, 0),
-                    new Relative3dPoint(1, 1f / 8 , 0),
-                    new Relative3dPoint(xOffset, 1f / 8, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, right3Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-            }
-        }
-        
-        private void RenderBottomLeftCrenellation(Graphics g)
-        {
-            //only draw taper if enough space
-            if (Height >= BottomTaper)
-            {
-                Point[] points =
-                {
-                    new Point(0, 0),
-                    new Point(CrenellationImage.Width, 0),
-                    new Point(CrenellationImage.Width, CrenellationImage.Height),
-                };
-                Relative3dPoint[] taperBLeftPoints =
-                {
-                    new Relative3dPoint(0, 1, CrenellationHeight),
-                    new Relative3dPoint(CrenellationThickness, 1, CrenellationHeight),
-                    new Relative3dPoint(0, 1, CrenellationHeight + BottomTaper)
-                };
-                using (Bitmap image = CrenellationImage.IntersectMask(points))
-                {
-                    g.DrawImage(image, taperBLeftPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-                }
-            }
-            
-            using (Bitmap frontImage = GetMaskedCrenellationFrontImage())
-            using (Bitmap topImage = GetMaskedCrenellationTopImage())
-            using (Bitmap top2Image = GetMaskedCrenellationTop2Image())
-            {
-                Relative3dPoint[] top1Points =
-                {
-                    new Relative3dPoint(CrenellationThickness, 0, CrenellationHeight / 2),
-                    new Relative3dPoint(CrenellationThickness, 1, CrenellationHeight / 2),
-                    new Relative3dPoint(0, 0, CrenellationHeight / 2)
-                };
-                g.DrawImage(topImage, top1Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                Relative3dPoint[] top2Points =
-                {
-                    new Relative3dPoint(CrenellationThickness, 0, 0),
-                    new Relative3dPoint(CrenellationThickness, 1, 0),
-                    new Relative3dPoint(0, 0, 0)
-                };
-                g.DrawImage(top2Image, top2Points, GridDiagonal, BrushesAndColors.ShadingTopColor);
-                
-                Relative3dPoint[] frontPoints = {
-                    new Relative3dPoint(0, 0, 0),
-                    new Relative3dPoint(0, 1, 0),
-                    new Relative3dPoint(0, 0, CrenellationHeight),
-                };
-                g.DrawImage(frontImage, frontPoints, GridDiagonal, BrushesAndColors.ShadingLeftColor);
-
-                Relative3dPoint[] right1Points =
-                {
-                    new Relative3dPoint(0, 1, 0),
-                    new Relative3dPoint(CrenellationThickness,  1, 0),
-                    new Relative3dPoint(0, 1, CrenellationHeight)
-                };
-                g.DrawImage(CrenellationImage, right1Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-                
-                Relative3dPoint[] right2Points =
-                {
-                    new Relative3dPoint(0, 5f / 8, 0),
-                    new Relative3dPoint(CrenellationThickness, 5f / 8, 0),
-                    new Relative3dPoint(0, 5f / 8, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, right2Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-                
-                Relative3dPoint[] right3Points =
-                {
-                    new Relative3dPoint(0, 1f / 8, 0),
-                    new Relative3dPoint(CrenellationThickness, 1f / 8 , 0),
-                    new Relative3dPoint(0, 1f / 8, CrenellationHeight / 2)
-                };
-                g.DrawImage(CrenellationImage, right3Points, GridDiagonal, BrushesAndColors.ShadingRightColor);
-            }
-        }
-        
         private Bitmap GetMaskedCrenellationFrontImage()
         {
             int wUnit = CrenellationImage.Width / 8;
@@ -432,7 +221,7 @@ namespace isogen.iso3d.Builders
                 new Point(0, hUnit * 2),
             });
         }
-        
+
         private Bitmap GetMaskedCrenellationTopImage()
         {
             int wUnit = CrenellationImage.Width / 8;
@@ -449,7 +238,7 @@ namespace isogen.iso3d.Builders
                 new Point(wUnit * 7, hUnit),
             });
         }
-        
+
         private Bitmap GetMaskedCrenellationTop2Image()
         {
             int wUnit = CrenellationImage.Width / 8;

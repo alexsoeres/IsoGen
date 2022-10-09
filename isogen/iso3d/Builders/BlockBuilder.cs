@@ -34,7 +34,7 @@ namespace isogen.iso3d.Builders
             return new BlockBuilder() {TopImage = TopImage, LeftImage = LeftImage, RightImage = RightImage, GridDiagonal = GridDiagonal, Height = height};
         }
 
-        public Image Render()
+        public Image Render(Orientation o = Orientation.TopLeft)
         {
             Size s = CalculateBounds(GridDiagonal, Height);
             Bitmap b = new Bitmap(s.Width, s.Height);
@@ -46,33 +46,33 @@ namespace isogen.iso3d.Builders
 
                 if (LeftImage != null)
                 {
-                    Relative3dPoint[] leftImageDestPoints =
+                    Relative3dCoordinate[] leftImageDestPoints =
                     {
-                        new Relative3dPoint(0, 0, 0),
-                        new Relative3dPoint(0, 1, 0),
-                        new Relative3dPoint(0, 0, Height)
+                        new Relative3dCoordinate(0, 0, 0),
+                        new Relative3dCoordinate(0, 1, 0),
+                        new Relative3dCoordinate(0, 0, Height)
                     };
                     g.DrawImage(LeftImage, leftImageDestPoints.Take(3).ToArray(), GridDiagonal, BrushesAndColors.ShadingLeftColor);
                 }
 
                 if (RightImage != null)
                 {
-                    Relative3dPoint[] rightImageDestPoints =
+                    Relative3dCoordinate[] rightImageDestPoints =
                     {
-                        new Relative3dPoint(0, 1, 0),
-                        new Relative3dPoint(1, 1, 0),
-                        new Relative3dPoint(0, 1, Height)
+                        new Relative3dCoordinate(0, 1, 0),
+                        new Relative3dCoordinate(1, 1, 0),
+                        new Relative3dCoordinate(0, 1, Height)
                     };
                     g.DrawImage(RightImage, rightImageDestPoints.Take(3).ToArray(), GridDiagonal, BrushesAndColors.ShadingRightColor);
                 }
 
                 if (TopImage != null)
                 {
-                    Relative3dPoint[] topImageDestPoints =
+                    Relative3dCoordinate[] topImageDestPoints =
                     {
-                        new Relative3dPoint(0, 0, 0),
-                        new Relative3dPoint(1, 0, 0),
-                        new Relative3dPoint(0, 1, 0)
+                        new Relative3dCoordinate(0, 0, 0),
+                        new Relative3dCoordinate(1, 0, 0),
+                        new Relative3dCoordinate(0, 1, 0)
                     };
                     g.DrawImage(TopImage, topImageDestPoints.Take(3).ToArray(), GridDiagonal, BrushesAndColors.ShadingTopColor);
                 }

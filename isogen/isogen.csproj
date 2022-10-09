@@ -40,18 +40,20 @@
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="ColorExtensions.cs" />
+        <Compile Include="iso3d\AngleExtensions.cs" />
         <Compile Include="iso3d\BrushesAndColors.cs" />
         <Compile Include="iso3d\Builders\BlockBuilder.cs" />
         <Compile Include="iso3d\Builders\CrenellatedWallBuilder.cs" />
         <Compile Include="iso3d\Builders\IRender.cs" />
         <Compile Include="iso3d\Builders\Isometric3dBuilder.cs" />
-        <Compile Include="iso3d\Builders\Relative3dFace.cs" />
+        <Compile Include="iso3d\ColorExtensions.cs" />
         <Compile Include="iso3d\Isometric3dUtils.cs" />
-        <Compile Include="iso3d\Relative3dPoint.cs" />
+        <Compile Include="iso3d\Orientation.cs" />
+        <Compile Include="iso3d\Relative3dFace.cs" />
+        <Compile Include="iso3d\Relative3dCoordinate.cs" />
+        <Compile Include="iso3d\RenderingExtensions.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="ImageExtensions.cs" />
     </ItemGroup>
     <ItemGroup>
       <Content Include=".gitignore" />

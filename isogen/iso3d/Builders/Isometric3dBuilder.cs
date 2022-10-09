@@ -20,8 +20,7 @@ namespace isogen.iso3d.Builders
 
             public CrenellatedWallBuilder CrenellatedWall()
             {
-                return new CrenellatedWallBuilder(Base, GridDiagonal,
-                    CrenellatedWallBuilder.CrenellationVariant.UpperLeft) {LeftImage = Base};
+                return new CrenellatedWallBuilder(Base, GridDiagonal, CrenellatedWallBuilder.CrenellationVariant.Single);
             }
         }
     }

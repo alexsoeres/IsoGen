@@ -4,11 +4,12 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using isogen.iso3d;
+using isogen.iso3d.Builders;
 using Brushes = System.Drawing.Brushes;
 
 namespace IsoGen
 {
-    public static class ImageExtensions
+    public static class RenderingExtensions
     {
         public static Bitmap[,] ExtractTileSet(this Image image, Size tileSize)
         {
@@ -154,7 +155,7 @@ namespace IsoGen
                 return b;
             }
         }
-        public static void DrawImage(this Graphics g, Image image, Relative3dPoint[] ps, int d)
+        public static void DrawImage(this Graphics g, Image image, Relative3dCoordinate[] ps, int d)
         {
             if (ps.Length != 3)
             {
@@ -166,7 +167,7 @@ namespace IsoGen
             g.DrawImageV2(image, translated);
         }
 
-        public static void DrawImage(this Graphics g, Image image, Relative3dPoint[] ps, int d, Color overlay)
+        public static void DrawImage(this Graphics g, Image image, Relative3dCoordinate[] ps, int d, Color overlay)
         {
             if (ps.Length != 3)
             {
@@ -234,7 +235,7 @@ namespace IsoGen
             }
         }
         
-        public static Point Translate3dCoordinate(this Relative3dPoint p, int d)
+        public static Point Translate3dCoordinate(this Relative3dCoordinate p, int d)
         {
             int hd = d / 2;
             
@@ -259,6 +260,38 @@ namespace IsoGen
             {
                 bufferFunc(buffer, gBuffer);
                 g.DrawImage(buffer, 0, 0);
+            }
+        }
+
+        public static void Draw3dFaces(this Graphics g, IEnumerable<Relative3dFace> faces, Orientation orientation, int diagonal)
+        {
+            Relative3dFace[] reordered = faces
+                .Where(x => x.RenderingOrders[(int) orientation] >= 0)
+                .OrderBy(x => x.RenderingOrders[(int) orientation])
+                .ToArray();
+
+            foreach (Relative3dFace face in reordered)
+            {
+                g.Draw3dFace(face, orientation, diagonal);
+            }
+        }
+
+        public static void Draw3dFace(this Graphics g, Relative3dFace face, Orientation orientation, int diagonal)
+        {
+            float offset = orientation.GetOffset();
+            Relative3dCoordinate[] rotatedPoints = face.Points.Select(x => x.Rotate(offset)).ToArray();
+
+            Relative3dFace rotatedFace = new Relative3dFace(rotatedPoints, face.Image, face.RenderingOrders);
+
+            Color? shading = face.Shadings[(int) orientation];
+            
+            if (shading != null)
+            {
+                g.DrawImage(rotatedFace.Image, rotatedFace.Points, diagonal, shading.Value);
+            }
+            else
+            {
+                g.DrawImage(rotatedFace.Image, rotatedFace.Points, diagonal);
             }
         }
     }

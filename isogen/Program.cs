@@ -6,7 +6,7 @@ namespace IsoGen
 {
     internal class Program
     {
-        private const int DIAGONAL = 1000;
+        private const int DIAGONAL = 128;
         
         public static void Main(string[] args)
         {
@@ -92,15 +92,15 @@ namespace IsoGen
                 },
                 {
                     rockCrenellatedWall.Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.UpperRight).Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.LowerLeft).Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.LowerRight).Render(),
+                    rockCrenellatedWall.Render(Orientation.TopRight),
+                    rockCrenellatedWall.Render(Orientation.BottomLeft),
+                    rockCrenellatedWall.Render(Orientation.BottomRight),
                 },
                 {
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.UpperLeft | CrenellatedWallBuilder.CrenellationVariant.UpperRight).Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.UpperRight | CrenellatedWallBuilder.CrenellationVariant.LowerRight).Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.LowerRight | CrenellatedWallBuilder.CrenellationVariant.LowerLeft).Render(),
-                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.LowerLeft | CrenellatedWallBuilder.CrenellationVariant.UpperLeft).Render(),
+                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.Corner).Render(),
+                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.Corner).Render(Orientation.TopRight),
+                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.Corner).Render(Orientation.BottomLeft),
+                    rockCrenellatedWall.WithVariant(CrenellatedWallBuilder.CrenellationVariant.Corner).Render(Orientation.BottomRight),
                 },
             };
         }

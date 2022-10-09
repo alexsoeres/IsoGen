@@ -4,6 +4,6 @@ namespace isogen.iso3d.Builders
 {
     public interface IRender
     {
-        Image Render();
+        Image Render(Orientation o = Orientation.TopLeft);
     }
 }
